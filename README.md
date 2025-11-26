@@ -1,73 +1,60 @@
-# React + TypeScript + Vite
+# **PromptDock — Your Personal Prompt Organizer for ChatGPT**
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+PromptDock is a lightweight Chrome Extension that lets you **save, organize, and instantly reuse your best ChatGPT prompts** — right from your browser.  
+No more scrolling through old chats or losing prompts inside long sessions. Everything is structured, searchable, and one click away.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 **Features**
 
-## React Compiler
+### **✨ Save Prompts Instantly**
+Store any prompt you use while browsing or chatting.  
+Each prompt includes:
+- Title  
+- Content  
+- Tags  
+- Folder  
+- Pinned state  
+- Timestamp  
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### **📁 Organize Your Workspace**
+Use folders and tags to keep your prompt library clean and efficient.  
+Quickly filter by folder or search across all prompts.
 
-## Expanding the ESLint configuration
+### **🔍 Fast Search**
+Search by:
+- Title  
+- Body text  
+- Tags  
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Perfect for users with large prompt collections.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### **📋 One-Click Copy**
+Insert your most-used prompts into ChatGPT in seconds with a single tap.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### **🔐 Privacy-First**
+PromptDock stores all data **locally in `chrome.storage.sync`**.  
+Nothing leaves your browser. No cloud. No tracking. No external databases.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🛠️ **Tech Stack**
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x';
-import reactDom from 'eslint-plugin-react-dom';
+- **TypeScript**
+- **React + Vite**
+- **TailwindCSS**
+- **Chrome Extension (Manifest V3)**
+- **chrome.storage.sync** (local-only persistence)
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+Architecture uses **Atomic Design** and a repository pattern so future features (cloud sync, teams, AI tagging) can be added without rewrites.
+
+---
+
+## 📦 **Installation (Development)**
+
+```bash
+git clone https://github.com/<your-username>/promptdock.git
+cd promptdock
+npm install
+npm run dev
 ```
