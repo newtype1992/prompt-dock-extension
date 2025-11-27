@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Prompt } from '../../../models/prompt';
 import { generateId } from '../../utils/id';
 import { usePromptData } from '../../hooks/usePromptData';
@@ -10,6 +10,10 @@ import { HeaderBar } from '../organisms/HeaderBar';
 import { PromptForm, type PromptFormValues } from '../organisms/PromptForm';
 import { PromptList } from '../organisms/PromptList';
 import { PopupLayout } from '../templates/PopupLayout';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { buildIndexedPrompts, type IndexedPrompt } from '../../utils/searchIndex';
+import { scorePrompt } from '../../utils/searchScoring';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
 export function PopupPage() {
   const {
@@ -26,32 +30,50 @@ export function PopupPage() {
   } = usePromptData();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm, 200);
   const [selectedFolder, setSelectedFolder] = useState<string | 'all'>('all');
   const [pinnedOnly, setPinnedOnly] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
+  const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
+  const [focusTitleOnForm, setFocusTitleOnForm] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const indexedPrompts = useMemo<IndexedPrompt[]>(() => buildIndexedPrompts(prompts), [prompts]);
 
   const filteredPrompts = useMemo(() => {
-    const normalizedSearch = searchTerm.toLowerCase();
-
-    return prompts
+    const query = debouncedSearch.trim().toLowerCase();
+    const candidates = indexedPrompts
       .filter((prompt) => (selectedFolder === 'all' ? true : prompt.folder === selectedFolder))
-      .filter((prompt) => (pinnedOnly ? prompt.pinned : true))
-      .filter((prompt) => {
-        if (!normalizedSearch) return true;
-        return (
-          prompt.title.toLowerCase().includes(normalizedSearch) ||
-          prompt.content.toLowerCase().includes(normalizedSearch) ||
-          prompt.tags.some((tag) => tag.toLowerCase().includes(normalizedSearch))
-        );
-      })
-      .sort((a, b) => {
-        if (a.pinned === b.pinned) {
-          return b.updatedAt - a.updatedAt;
-        }
-        return a.pinned ? -1 : 1;
-      });
-  }, [prompts, searchTerm, selectedFolder, pinnedOnly]);
+      .filter((prompt) => (pinnedOnly ? prompt.pinned : true));
+
+    if (!query) {
+      return candidates
+        .sort((a, b) => {
+          if (a.pinned === b.pinned) {
+            return b.updatedAt - a.updatedAt;
+          }
+          return a.pinned ? -1 : 1;
+        })
+        .map((prompt) => prompt as Prompt);
+    }
+
+    return candidates
+      .filter((prompt) => prompt.searchText.includes(query))
+      .map((prompt) => ({ prompt, score: scorePrompt(prompt, query) }))
+      .sort((a, b) => b.score - a.score || (b.prompt.updatedAt - a.prompt.updatedAt))
+      .map(({ prompt }) => prompt as Prompt);
+  }, [indexedPrompts, debouncedSearch, selectedFolder, pinnedOnly]);
+
+  useEffect(() => {
+    if (!filteredPrompts.length) {
+      setSelectedPromptId(null);
+      return;
+    }
+    if (!selectedPromptId || !filteredPrompts.find((p) => p.id === selectedPromptId)) {
+      setSelectedPromptId(filteredPrompts[0].id);
+    }
+  }, [filteredPrompts, selectedPromptId]);
 
   const handleFolderForPrompt = async (folderName: string | null) => {
     if (!folderName) return null;
@@ -99,6 +121,8 @@ export function PopupPage() {
 
     setShowForm(false);
     setEditingPrompt(null);
+    setSelectedPromptId(promptToSave.id);
+    setFocusTitleOnForm(false);
   };
 
   const handleEditPrompt = (prompt: Prompt) => {
@@ -131,6 +155,44 @@ export function PopupPage() {
 
   const hasNoMatches = !loading && prompts.length > 0 && filteredPrompts.length === 0;
 
+  const focusSearch = useCallback(() => {
+    searchInputRef.current?.focus();
+  }, []);
+
+  const openNewPromptForm = useCallback(() => {
+    setFocusTitleOnForm(true);
+    setShowForm(true);
+    setEditingPrompt(null);
+  }, []);
+
+  const moveSelection = useCallback(
+    (delta: 1 | -1) => {
+      if (!filteredPrompts.length) return;
+      const currentIndex = filteredPrompts.findIndex((p) => p.id === selectedPromptId);
+      const nextIndex = Math.min(
+        filteredPrompts.length - 1,
+        Math.max(0, currentIndex === -1 ? 0 : currentIndex + delta),
+      );
+      setSelectedPromptId(filteredPrompts[nextIndex]?.id ?? null);
+    },
+    [filteredPrompts, selectedPromptId],
+  );
+
+  const activateSelection = useCallback(() => {
+    if (!selectedPromptId) return;
+    const prompt = filteredPrompts.find((p) => p.id === selectedPromptId);
+    if (prompt) {
+      void handleCopyPrompt(prompt);
+    }
+  }, [filteredPrompts, selectedPromptId]);
+
+  useKeyboardShortcuts({
+    focusSearch,
+    openNewPromptForm,
+    moveSelection,
+    activateSelection,
+  });
+
   return (
     <PopupLayout header={<HeaderBar promptCount={prompts.length} />}>
       {error ? <InlineMessage message={error} variant="error" /> : null}
@@ -143,7 +205,11 @@ export function PopupPage() {
           </span>
         </div>
         <div className="mt-2 space-y-2">
-          <SearchBar value={searchTerm} onChange={(value) => setSearchTerm(value)} />
+          <SearchBar
+            ref={searchInputRef}
+            value={searchTerm}
+            onChange={(value) => setSearchTerm(value)}
+          />
           <div className="space-y-1">
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
               Folder
@@ -163,23 +229,22 @@ export function PopupPage() {
                     : 'border-[#2f333c] bg-[#1c1f27] text-slate-200 hover:border-amber-400 hover:bg-[#251a0b] hover:text-amber-200'
                 }`}
                 aria-pressed={pinnedOnly}
-                onClick={() => setPinnedOnly((prev) => !prev)}
-              >
-                <span className="text-base">{pinnedOnly ? '★' : '☆'}</span>
-                Pinned
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-10 items-center gap-2 rounded-md bg-amber-500 px-3 text-sm font-semibold text-black shadow-[0_12px_30px_-16px_rgba(245,158,11,0.8)] hover:bg-amber-400 active:bg-amber-500"
-                onClick={() => {
-                  setShowForm(true);
-                  setEditingPrompt(null);
-                }}
-              >
-                + New
-              </button>
-            </div>
+              onClick={() => setPinnedOnly((prev) => !prev)}
+            >
+              <span className="text-base">{pinnedOnly ? '★' : '☆'}</span>
+              Pinned
+            </button>
+            <button
+              type="button"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-amber-500 px-3 text-sm font-semibold text-black shadow-[0_12px_30px_-16px_rgba(245,158,11,0.8)] hover:bg-amber-400 active:bg-amber-500"
+              onClick={() => {
+                openNewPromptForm();
+              }}
+            >
+              + New
+            </button>
           </div>
+        </div>
         </div>
       </div>
 
@@ -188,9 +253,11 @@ export function PopupPage() {
           folders={folders}
           initialPrompt={editingPrompt ?? undefined}
           onSubmit={handleSavePrompt}
+          autoFocusTitle={focusTitleOnForm}
           onCancel={() => {
             setShowForm(false);
             setEditingPrompt(null);
+            setFocusTitleOnForm(false);
           }}
         />
       ) : null}
@@ -222,6 +289,8 @@ export function PopupPage() {
             onEdit={handleEditPrompt}
             onDelete={handleDeletePrompt}
             onTogglePin={handleTogglePin}
+            selectedPromptId={selectedPromptId}
+            onSelectPrompt={(prompt) => setSelectedPromptId(prompt.id)}
           />
         </>
       )}

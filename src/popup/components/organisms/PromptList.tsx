@@ -9,6 +9,8 @@ interface PromptListProps {
   onEdit: (prompt: Prompt) => void;
   onDelete: (prompt: Prompt) => void;
   onTogglePin: (prompt: Prompt) => void;
+  selectedPromptId?: string | null;
+  onSelectPrompt?: (prompt: Prompt) => void;
 }
 
 export function PromptList({
@@ -18,6 +20,8 @@ export function PromptList({
   onEdit,
   onDelete,
   onTogglePin,
+  selectedPromptId,
+  onSelectPrompt,
 }: PromptListProps) {
   const folderMap = new Map(folders.map((folder) => [folder.id, folder.name]));
 
@@ -32,6 +36,8 @@ export function PromptList({
           onEdit={onEdit}
           onDelete={onDelete}
           onTogglePin={onTogglePin}
+          onSelect={onSelectPrompt}
+          isSelected={prompt.id === selectedPromptId}
         />
       ))}
     </div>

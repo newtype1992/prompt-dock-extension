@@ -19,9 +19,16 @@ interface PromptFormProps {
   initialPrompt?: Prompt;
   onSubmit: (values: PromptFormValues) => Promise<void> | void;
   onCancel?: () => void;
+  autoFocusTitle?: boolean;
 }
 
-export function PromptForm({ folders, initialPrompt, onSubmit, onCancel }: PromptFormProps) {
+export function PromptForm({
+  folders,
+  initialPrompt,
+  onSubmit,
+  onCancel,
+  autoFocusTitle = false,
+}: PromptFormProps) {
   const [title, setTitle] = useState(initialPrompt?.title ?? '');
   const [content, setContent] = useState(initialPrompt?.content ?? '');
   const [folderInput, setFolderInput] = useState(() => {
@@ -82,6 +89,7 @@ export function PromptForm({ folders, initialPrompt, onSubmit, onCancel }: Promp
       <div className="flex flex-col gap-3">
         <TextInput
           label="Title"
+          autoFocus={autoFocusTitle}
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           required

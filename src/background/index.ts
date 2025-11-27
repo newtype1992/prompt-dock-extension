@@ -56,3 +56,26 @@ chrome.runtime.onMessage.addListener(
     return true;
   },
 );
+
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== 'open_promptdock') return;
+
+  try {
+    if (chrome.action && chrome.action.openPopup) {
+      await chrome.action.openPopup();
+      return;
+    }
+  } catch (err) {
+    console.warn('Unable to open popup via command', err);
+  }
+
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id) {
+      await chrome.action.setPopup({ tabId: tab.id, popup: 'popup.html' });
+      await chrome.action.openPopup?.();
+    }
+  } catch (err) {
+    console.error('Fallback to open popup failed', err);
+  }
+});

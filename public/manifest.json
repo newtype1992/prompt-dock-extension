@@ -19,6 +19,14 @@
       "128": "icons/icon128.png"
     }
   },
+  "commands": {
+    "open_promptdock": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+P"
+      },
+      "description": "Open PromptDock"
+    }
+  },
   "background": {
     "service_worker": "background.js",
     "type": "module"

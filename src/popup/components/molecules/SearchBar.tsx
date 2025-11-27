@@ -1,9 +1,14 @@
+import { forwardRef } from 'react';
+
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
 }
 
-export function SearchBar({ value, onChange }: SearchBarProps) {
+export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function SearchBar(
+  { value, onChange },
+  ref,
+) {
   return (
     <div className="relative">
       <svg
@@ -22,6 +27,7 @@ export function SearchBar({ value, onChange }: SearchBarProps) {
       </svg>
       <input
         type="search"
+        ref={ref}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder="Search prompts..."
@@ -30,4 +36,4 @@ export function SearchBar({ value, onChange }: SearchBarProps) {
       />
     </div>
   );
-}
+});
