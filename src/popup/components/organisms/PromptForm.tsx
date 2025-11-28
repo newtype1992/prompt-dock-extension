@@ -1,9 +1,11 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { Folder } from '../../../models/folder';
 import type { Prompt } from '../../../models/prompt';
 import { Button } from '../atoms/Button';
 import { TextArea } from '../atoms/TextArea';
 import { TextInput } from '../atoms/TextInput';
+import { TagSuggestions } from '../molecules/TagSuggestions';
+import { getSmartTagSuggestions } from '../../utils/tagSuggestions';
 
 export interface PromptFormValues {
   id?: string;
@@ -20,6 +22,7 @@ interface PromptFormProps {
   onSubmit: (values: PromptFormValues) => Promise<void> | void;
   onCancel?: () => void;
   autoFocusTitle?: boolean;
+  prompts: Prompt[];
 }
 
 export function PromptForm({
@@ -28,6 +31,7 @@ export function PromptForm({
   onSubmit,
   onCancel,
   autoFocusTitle = false,
+  prompts,
 }: PromptFormProps) {
   const [title, setTitle] = useState(initialPrompt?.title ?? '');
   const [content, setContent] = useState(initialPrompt?.content ?? '');
@@ -40,6 +44,7 @@ export function PromptForm({
   const [pinned, setPinned] = useState(initialPrompt?.pinned ?? false);
   const [submitting, setSubmitting] = useState(false);
   const isEditing = Boolean(initialPrompt);
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
 
   const folderNames = useMemo(() => folders.map((folder) => folder.name), [folders]);
 
@@ -71,6 +76,19 @@ export function PromptForm({
     } finally {
       setSubmitting(false);
     }
+  };
+
+  useEffect(() => {
+    const currentTags = parseTags(tagsInput);
+    const suggestions = getSmartTagSuggestions(prompts, title, content, currentTags);
+    setTagSuggestions(suggestions);
+  }, [content, prompts, tagsInput, title]);
+
+  const handleAddTagSuggestion = (tag: string) => {
+    const currentTags = parseTags(tagsInput);
+    if (currentTags.includes(tag)) return;
+    const nextTags = [...currentTags, tag];
+    setTagsInput(nextTags.join(', '));
   };
 
   return (
@@ -127,6 +145,9 @@ export function PromptForm({
               onChange={(event) => setTagsInput(event.target.value)}
               placeholder="e.g. brainstorming, marketing"
             />
+            <div className="mt-2">
+              <TagSuggestions suggestions={tagSuggestions} onAddTag={handleAddTagSuggestion} />
+            </div>
           </div>
           <button
             type="button"

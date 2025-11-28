@@ -14,6 +14,7 @@ import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { buildIndexedPrompts, type IndexedPrompt } from '../../utils/searchIndex';
 import { scorePrompt } from '../../utils/searchScoring';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
+import { FavoritesBar } from '../organisms/FavoritesBar';
 
 export function PopupPage() {
   const {
@@ -40,6 +41,13 @@ export function PopupPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const indexedPrompts = useMemo<IndexedPrompt[]>(() => buildIndexedPrompts(prompts), [prompts]);
+  const favorites = useMemo(
+    () =>
+      [...prompts]
+        .filter((prompt) => prompt.pinned)
+        .sort((a, b) => b.updatedAt - a.updatedAt),
+    [prompts],
+  );
 
   const filteredPrompts = useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase();
@@ -197,6 +205,8 @@ export function PopupPage() {
     <PopupLayout header={<HeaderBar promptCount={prompts.length} />}>
       {error ? <InlineMessage message={error} variant="error" /> : null}
 
+      <FavoritesBar favorites={favorites} onCopyPrompt={handleCopyPrompt} />
+
       <div className="rounded-lg border border-[#252932] bg-[#11141c] p-3 shadow-[0_8px_20px_-18px_rgba(0,0,0,0.7)]">
         <div className="flex items-center justify-between text-[12px] font-medium text-slate-400">
           <span>Filter &amp; find</span>
@@ -229,22 +239,22 @@ export function PopupPage() {
                     : 'border-[#2f333c] bg-[#1c1f27] text-slate-200 hover:border-amber-400 hover:bg-[#251a0b] hover:text-amber-200'
                 }`}
                 aria-pressed={pinnedOnly}
-              onClick={() => setPinnedOnly((prev) => !prev)}
-            >
-              <span className="text-base">{pinnedOnly ? '★' : '☆'}</span>
-              Pinned
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-10 items-center gap-2 rounded-md bg-amber-500 px-3 text-sm font-semibold text-black shadow-[0_12px_30px_-16px_rgba(245,158,11,0.8)] hover:bg-amber-400 active:bg-amber-500"
-              onClick={() => {
-                openNewPromptForm();
-              }}
-            >
-              + New
-            </button>
+                onClick={() => setPinnedOnly((prev) => !prev)}
+              >
+                <span className="text-base">{pinnedOnly ? '★' : '☆'}</span>
+                Pinned
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-10 items-center gap-2 rounded-md bg-amber-500 px-3 text-sm font-semibold text-black shadow-[0_12px_30px_-16px_rgba(245,158,11,0.8)] hover:bg-amber-400 active:bg-amber-500"
+                onClick={() => {
+                  openNewPromptForm();
+                }}
+              >
+                + New
+              </button>
+            </div>
           </div>
-        </div>
         </div>
       </div>
 
@@ -254,6 +264,7 @@ export function PopupPage() {
           initialPrompt={editingPrompt ?? undefined}
           onSubmit={handleSavePrompt}
           autoFocusTitle={focusTitleOnForm}
+          prompts={prompts}
           onCancel={() => {
             setShowForm(false);
             setEditingPrompt(null);
