@@ -37,6 +37,6 @@
       "js": ["chatgptContentScript.js"]
     }
   ],
-  "permissions": ["storage", "scripting", "activeTab"],
+  "permissions": ["storage", "activeTab"],
   "host_permissions": ["https://chatgpt.com/*", "https://chat.openai.com/*"]
 }
